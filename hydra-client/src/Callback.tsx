@@ -44,6 +44,14 @@ function Callback() {
           return;
         }
 
+        // ✅ SAVE THE TOKEN HERE
+        if (data.access_token) {
+          localStorage.setItem("access_token", data.access_token);
+          
+          // Automatically redirect to the /me page
+          window.location.href = "/me";
+        }
+
         setTokens(data);
         setMessage("Login successful 🎉");
       })

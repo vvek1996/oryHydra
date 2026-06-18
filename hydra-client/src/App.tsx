@@ -4,6 +4,7 @@ import Callback from "./Callback";
 import Login from "./Login";
 import Register from "./Register";
 import Consent from "./Consent";
+import Me from "./Me";
 
 function Home() {
   const login = () => {
@@ -30,6 +31,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/consent" element={<Consent />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/me" element={<Me />} />
       </Routes>
     </BrowserRouter>
   );
