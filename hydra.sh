@@ -5,4 +5,6 @@ export URLS_LOGIN=http://localhost:3000/login
 export URLS_LOGOUT=http://localhost:4000/logout
 export SECRETS_SYSTEM=some-secure-random-string
 
+# hydra migrate sql -e --yes
+
 hydra serve all --dev
