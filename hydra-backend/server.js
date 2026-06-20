@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 // Use specific CORS configuration for better security, allowing credentials (cookies)
 // to be sent from your frontend origin.
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ origin: 'http://localhost', credentials: true }));
 
 /**
  * LOGIN ACCEPT
@@ -36,7 +36,7 @@ app.get("/login", async (req, res) => {
     if (err.response && err.response.status === 401) {
       // Real-world scenario: User has no session. Redirect to the frontend login page.
       // Pass the login_challenge so the frontend knows where to return after login.
-      return res.redirect(`http://localhost:3000/login?login_challenge=${challenge}`);
+      return res.redirect(`http://localhost/login?login_challenge=${challenge}`);
     }
 
     console.error(err.response?.data || err);
@@ -95,7 +95,7 @@ app.get("/consent", async (req, res) => {
     if (err.response && err.response.status === 401) {
       // The user is not logged in, so we redirect them to the login page,
       // passing the consent_challenge along so we can resume the flow after login.
-      return res.redirect(`http://localhost:3000/login?consent_challenge=${challenge}`);
+      return res.redirect(`http://localhost/login?consent_challenge=${challenge}`);
     }
     console.error(err.response?.data || err);
     res.status(500).send("Consent failed");
@@ -111,7 +111,7 @@ app.post("/token", async (req, res) => {
       new URLSearchParams({
         grant_type: "authorization_code",
         code: code,
-        redirect_uri: "http://localhost:3000/callback",
+        redirect_uri: "http://localhost/callback",
       }),
       {
         auth: {
@@ -174,7 +174,7 @@ app.get("/logout", async (req, res) => {
 
   // If there's no challenge, redirect to frontend home
   if (!challenge) {
-    return res.redirect("http://localhost:3000/");
+    return res.redirect("http://localhost/");
   }
 
   try {

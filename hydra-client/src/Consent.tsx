@@ -12,9 +12,9 @@ function Consent() {
 
     if (!challenge) return;
 
-     window.location.href = `http://localhost:4000/consent?consent_challenge=${challenge}`;
+     window.location.href = `http://localhost/api/consent?consent_challenge=${challenge}`;
      
-    // fetch(`http://localhost:4000/consent?consent_challenge=${challenge}`)
+    // fetch(`http://localhost/api/consent?consent_challenge=${challenge}`)
     //   .then(res => res.json())
     //   .then(data => {
     //     window.location.href = data.redirect_to;

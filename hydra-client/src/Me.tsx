@@ -18,7 +18,7 @@ function Me() {
     }
 
     // Call your Express backend's protected /me endpoint
-    fetch("http://localhost:4000/me", {
+    fetch("http://localhost/api/me", {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -48,10 +48,10 @@ function Me() {
     localStorage.removeItem("id_token");
 
     // Redirect to Hydra logout endpoint
-    const hydraLogoutUrl = `http://localhost:4444/oauth2/sessions/logout?id_token_hint=${encodeURIComponent(
+    const hydraLogoutUrl = `http://localhost/.ory/hydra/oauth2/sessions/logout?id_token_hint=${encodeURIComponent(
       idToken
     )}&post_logout_redirect_uri=${encodeURIComponent(
-      "http://localhost:3000/logout-callback"
+      "http://localhost/logout-callback"
     )}`;
     window.location.href = hydraLogoutUrl;
   };
