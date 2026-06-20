@@ -165,6 +165,49 @@ app.get("/me", async (req, res) => {
   }
 });
 
+/**
+ * LOGOUT ENDPOINT
+ * Handles the Hydra logout challenge, revokes Kratos session, and completes the flow
+ */
+app.get("/logout", async (req, res) => {
+  const challenge = req.query.logout_challenge;
+
+  // If there's no challenge, redirect to frontend home
+  if (!challenge) {
+    return res.redirect("http://localhost:3000/");
+  }
+
+  try {
+    // 1. Accept the logout challenge in Ory Hydra
+    const response = await axios.put(
+      `http://localhost:4445/oauth2/auth/requests/logout/accept?logout_challenge=${challenge}`
+    );
+    const redirectUrl = response.data.redirect_to;
+
+    // 2. Fetch browser logout URL from Ory Kratos
+    try {
+      const kratosResponse = await axios.get(
+        "http://localhost:4433/self-service/logout/browser",
+        {
+          headers: { Cookie: req.headers.cookie || "" }
+        }
+      );
+      const kratosLogoutUrl = kratosResponse.data.logout_url;
+      // Redirect to Kratos logout URL, passing the Hydra redirect_to as return_to
+      return res.redirect(
+        `${kratosLogoutUrl}&return_to=${encodeURIComponent(redirectUrl)}`
+      );
+    } catch (kratosErr) {
+      // If the Kratos session is invalid/expired (e.g. 401), we just complete Hydra logout directly
+      console.warn("Kratos logout failed or no active session:", kratosErr.response?.data || kratosErr.message);
+      return res.redirect(redirectUrl);
+    }
+  } catch (err) {
+    console.error(err.response?.data || err);
+    res.status(500).send("Logout failed");
+  }
+});
+
 app.listen(4000, () => {
   console.log("Backend running on http://localhost:4000");
 });

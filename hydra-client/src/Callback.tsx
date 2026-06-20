@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 
 function Callback() {
   const [message, setMessage] = useState("Processing login...");
@@ -47,6 +47,9 @@ function Callback() {
         // ✅ SAVE THE TOKEN HERE
         if (data.access_token) {
           localStorage.setItem("access_token", data.access_token);
+          if (data.id_token) {
+            localStorage.setItem("id_token", data.id_token);
+          }
           
           // Automatically redirect to the /me page
           window.location.href = "/me";

@@ -1,10 +1,10 @@
-import React from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Callback from "./Callback";
 import Login from "./Login";
 import Register from "./Register";
 import Consent from "./Consent";
 import Me from "./Me";
+import LogoutCallback from "./LogoutCallback";
 
 function Home() {
   const login = () => {
@@ -32,6 +32,7 @@ function App() {
         <Route path="/consent" element={<Consent />} />
         <Route path="/register" element={<Register />} />
         <Route path="/me" element={<Me />} />
+        <Route path="/logout-callback" element={<LogoutCallback />} />
       </Routes>
     </BrowserRouter>
   );
