@@ -23,7 +23,7 @@ function Register() {
     // Fetch registration flow
     axios
       .get(
-        `http://localhost/.ory/kratos/self-service/registration/flows?id=${flowId}`,
+        `http://localhost:8080/.ory/kratos/self-service/registration/flows?id=${flowId}`,
         {
           withCredentials: true // VERY IMPORTANT
         }

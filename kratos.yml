@@ -2,7 +2,7 @@ dsn: postgres://ory:secret@localhost:5432/kratos?sslmode=disable
 
 serve:
   public:
-    base_url: http://localhost:4433/
+    base_url: http://localhost:8080/.ory/kratos/
     cors:
       enabled: true
       allowed_origins:
@@ -26,6 +26,7 @@ selfservice:
   allowed_return_urls:
     - http://localhost:3000/
     - http://localhost:4444/
+    - http://localhost:8080/
 
   methods:
     password:

@@ -2,7 +2,7 @@
 
 function LogoutCallback() {
   const login = () => {
-    const authUrl = 'http://localhost/.ory/hydra/oauth2/auth?client_id=36d0db37-f52e-46b6-bf1d-3923fc9cf46d&response_type=code&scope=openid&redirect_uri=http://localhost/callback&state=securestate123';
+    const authUrl = 'http://localhost:8080/.ory/hydra/oauth2/auth?client_id=36d0db37-f52e-46b6-bf1d-3923fc9cf46d&response_type=code&scope=openid&redirect_uri=http://localhost:8080/callback&state=securestate123';
     window.location.href = authUrl;
   };
 

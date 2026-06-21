@@ -105,13 +105,24 @@ app.get("/consent", async (req, res) => {
 app.post("/token", async (req, res) => {
   const { code } = req.body;
 
+  const referer = req.headers.referer;
+  let redirectUri = "http://localhost:3000/callback"; // fallback
+  if (referer) {
+    try {
+      const u = new URL(referer);
+      redirectUri = `${u.protocol}//${u.host}/callback`;
+    } catch (e) {
+      // fallback
+    }
+  }
+
   try {
     const response = await axios.post(
       "http://localhost:4444/oauth2/token",
       new URLSearchParams({
         grant_type: "authorization_code",
         code: code,
-        redirect_uri: "http://localhost/callback",
+        redirect_uri: redirectUri,
       }),
       {
         auth: {

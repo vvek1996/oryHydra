@@ -1,0 +1,96 @@
+http:
+  routers:
+    # 1. Route /.ory/kratos to Kratos Public API (4433)
+    kratos-router:
+      rule: "PathPrefix(`/.ory/kratos`)"
+      entryPoints:
+        - web
+      service: kratos-service
+      middlewares:
+        - kratos-strip
+
+    # 2. Route /.ory/hydra to Hydra Public API (4444)
+    hydra-router:
+      rule: "PathPrefix(`/.ory/hydra`)"
+      entryPoints:
+        - web
+      service: hydra-service
+      middlewares:
+        - hydra-strip
+
+    # 3. Route /api to Express Backend (4000)
+    backend-router:
+      rule: "PathPrefix(`/api`)"
+      entryPoints:
+        - web
+      service: backend-service
+      middlewares:
+        - api-strip
+      priority: 50
+
+    # 4. Route / to React Frontend (3000)
+    frontend-router:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: frontend-service
+
+    # 5. Route /system (with redirect to /dashboard/)
+    system-router:
+      rule: "PathPrefix(`/system`)"
+      entryPoints:
+        - web
+      service: api@internal
+      middlewares:
+        - system-redirect
+
+    # 6. Route /dashboard to Traefik Dashboard
+    dashboard-router:
+      rule: "PathPrefix(`/dashboard`)"
+      entryPoints:
+        - web
+      service: api@internal
+
+    # 7. Route Traefik API endpoints to Traefik API (higher priority than backend)
+    traefik-api-router:
+      rule: "PathPrefix(`/api/rawdata`) || PathPrefix(`/api/overview`) || PathPrefix(`/api/http`) || PathPrefix(`/api/tcp`) || PathPrefix(`/api/udp`) || PathPrefix(`/api/entrypoints`) || PathPrefix(`/api/version`)"
+      entryPoints:
+        - web
+      service: api@internal
+      priority: 100
+
+  services:
+    kratos-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:4433"
+    hydra-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:4444"
+    backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:4000"
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3000"
+
+  middlewares:
+    kratos-strip:
+      stripPrefix:
+        prefixes:
+          - "/.ory/kratos"
+    hydra-strip:
+      stripPrefix:
+        prefixes:
+          - "/.ory/hydra"
+    api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    system-redirect:
+      redirectRegex:
+        regex: "^(https?)://([^/]+)/system(/?)$"
+        replacement: "${1}://${2}/dashboard/"

@@ -6,10 +6,10 @@ export SECRETS_SYSTEM=some-secure-random-string
 # export URLS_LOGIN=http://localhost:3000/login
 # export URLS_LOGOUT=http://localhost:4000/logout
 
-export URLS_SELF_ISSUER=http://localhost/.ory/hydra/
-export URLS_LOGIN=http://localhost/login
-export URLS_CONSENT=http://localhost/consent
-export URLS_LOGOUT=http://localhost/api/logout
+export URLS_SELF_ISSUER=http://localhost:8080/.ory/hydra/
+export URLS_LOGIN=http://localhost:8080/login
+export URLS_CONSENT=http://localhost:8080/consent
+export URLS_LOGOUT=http://localhost:8080/api/logout
 
 
 # hydra migrate sql -e --yes

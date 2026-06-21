@@ -1,0 +1,14 @@
+entryPoints:
+  web:
+    address: ":8080" # Change to ":8080" if port 80 is occupied or restricted on your container
+
+providers:
+  file:
+    filename: "/etc/traefik/routes.yml"
+    watch: true # Reloads configuration dynamically on file changes without restarting Traefik
+
+api:
+  dashboard: true
+
+log:
+  level: INFO

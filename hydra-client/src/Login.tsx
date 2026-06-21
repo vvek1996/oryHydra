@@ -4,7 +4,7 @@ import { Configuration, FrontendApi } from "@ory/client";
 // Initialize the Ory Kratos client
 const ory = new FrontendApi(
   new Configuration({
-    basePath: "http://localhost/.ory/kratos",
+    basePath: "http://localhost:8080/.ory/kratos",
     baseOptions: {
       withCredentials: true,
     },
@@ -33,7 +33,7 @@ function Login() {
         // If the user already has a valid session, Kratos throws a 400 "session_already_available" error
         if (err.response?.status === 400 && err.response?.data?.error?.id === "session_already_available") {
           if (loginChallenge) {
-            window.location.href = `http://localhost/api/login?login_challenge=${loginChallenge}`;
+            window.location.href = `http://localhost:8080/api/login?login_challenge=${loginChallenge}`;
           } else {
             window.location.href = "/";
           }
@@ -71,7 +71,7 @@ function Login() {
         // Authentication successful! The browser now has a valid Kratos session cookie.
         // Redirect back to the Express backend to finalize the Hydra OAuth2 login challenge.
         if (challenge) {
-          window.location.href = `http://localhost/api/login?login_challenge=${challenge}`;
+          window.location.href = `http://localhost:8080/api/login?login_challenge=${challenge}`;
         } else {
           window.location.href = "/";
         }
