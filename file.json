@@ -1,0 +1,23 @@
+{
+    "user": [
+        {
+            "email": "kp@example.com",
+            "password": "secret"
+        },
+        {
+            "email": "john@example.com",
+            "password": "password"
+        }
+    ],
+    "group":["group1", "group2"],
+    "userGroup": [
+        {
+            "user": "kp@example.com",
+            "group": "group1"
+        },
+        {
+            "user": "john@example.com",
+            "group": "group2"
+        }
+    ]
+}
