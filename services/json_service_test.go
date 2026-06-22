@@ -406,4 +406,93 @@ func TestRenameGroup(t *testing.T) {
 	}
 }
 
+func TestTrimmingBehavior(t *testing.T) {
+	filePath := setupTestFile(t)
+	service, err := NewJsonFileService(filePath)
+	if err != nil {
+		t.Fatalf("failed to initialize service: %v", err)
+	}
+
+	// 1. AddUser with untrimmed email
+	err = service.AddUser("  new_user@example.com  ", "SecurePass123!")
+	if err != nil {
+		t.Fatalf("failed to AddUser: %v", err)
+	}
+	// Verify it was saved trimmed
+	userFound := false
+	for _, u := range service.JSONData.Users {
+		if u.Email == "new_user@example.com" {
+			userFound = true
+			break
+		}
+	}
+	if !userFound {
+		t.Error("expected email to be saved trimmed")
+	}
+
+	// 2. AddGroup with untrimmed name
+	err = service.AddGroup("   group3   ")
+	if err != nil {
+		t.Fatalf("failed to AddGroup: %v", err)
+	}
+	// Verify it was saved trimmed
+	groupFound := false
+	for _, g := range service.JSONData.Groups {
+		if g == "group3" {
+			groupFound = true
+			break
+		}
+	}
+	if !groupFound {
+		t.Error("expected group name to be saved trimmed")
+	}
+
+	// 3. AddUserToGroup with untrimmed email and group
+	err = service.AddUserToGroup("   new_user@example.com   ", "   group3   ")
+	if err != nil {
+		t.Fatalf("failed to AddUserToGroup: %v", err)
+	}
+	// Verify mapping saved trimmed
+	assocFound := false
+	for _, ug := range service.JSONData.UserGroup {
+		if ug.User == "new_user@example.com" && ug.Group == "group3" {
+			assocFound = true
+			break
+		}
+	}
+	if !assocFound {
+		t.Error("expected user-group mapping to be saved trimmed")
+	}
+
+	// 4. ChangePassword with untrimmed email
+	err = service.ChangePassword("   new_user@example.com   ", "NewSecurePass123!")
+	if err != nil {
+		t.Fatalf("failed to ChangePassword: %v", err)
+	}
+
+	// 5. RenameGroup with untrimmed names
+	err = service.RenameGroup("   group3   ", "   group3_renamed   ")
+	if err != nil {
+		t.Fatalf("failed to RenameGroup: %v", err)
+	}
+	// Verify it renamed correctly
+	renamedGroupFound := false
+	for _, g := range service.JSONData.Groups {
+		if g == "group3_renamed" {
+			renamedGroupFound = true
+			break
+		}
+	}
+	if !renamedGroupFound {
+		t.Error("expected group3_renamed to exist")
+	}
+
+	// 6. RemoveGroup with untrimmed name
+	err = service.RemoveGroup("   group3_renamed   ")
+	if err != nil {
+		t.Fatalf("failed to RemoveGroup: %v", err)
+	}
+}
+
+
 
