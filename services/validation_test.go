@@ -41,3 +41,51 @@ func TestIsValidEmail(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePassword(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		wantErr  bool
+	}{
+		{"Valid password", "Secure123!", false},
+		{"Short password", "Sec12!", true},
+		{"No lowercase", "SECURE123!", true},
+		{"No uppercase", "secure123!", true},
+		{"No digits", "SecurePass!", true},
+		{"No special characters", "SecurePass123", true},
+		{"Empty password", "", true},
+		{"Unicode support valid", "Sécurisé123!", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePassword(tt.password)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidatePassword(%q) error = %v; wantErr = %v", tt.password, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestTrimSpace(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"  hello  ", "hello"},
+		{"hello", "hello"},
+		{"\n\thello\r\n", "hello"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := TrimSpace(tt.input); got != tt.expected {
+				t.Errorf("TrimSpace(%q) = %q; expected %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+

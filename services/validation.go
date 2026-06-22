@@ -1,8 +1,10 @@
 package services
 
 import (
+	"fmt"
 	"net/mail"
 	"strings"
+	"unicode"
 )
 
 // IsValidEmail checks if an email string has a valid format according to RFC 5322.
@@ -55,3 +57,57 @@ func IsValidEmail(email string) bool {
 
 	return true
 }
+
+// ValidatePassword checks if a password meets standard security requirements:
+// - at least 8 characters long
+// - at least one lowercase letter
+// - at least one uppercase letter
+// - at least one digit
+// - at least one special character
+func ValidatePassword(password string) error {
+	if len(password) < 8 {
+		return fmt.Errorf("password must be at least 8 characters long")
+	}
+
+	var (
+		hasLower   bool
+		hasUpper   bool
+		hasNumber  bool
+		hasSpecial bool
+	)
+
+	for _, ch := range password {
+		switch {
+		case unicode.IsLower(ch):
+			hasLower = true
+		case unicode.IsUpper(ch):
+			hasUpper = true
+		case unicode.IsDigit(ch): // unicode.IsDigit is more appropriate than unicode.IsNumber to match standard 0-9 digits
+			hasNumber = true
+		case unicode.IsPunct(ch) || unicode.IsSymbol(ch):
+			hasSpecial = true
+		}
+	}
+
+	if !hasLower {
+		return fmt.Errorf("password must contain at least one lowercase letter")
+	}
+	if !hasUpper {
+		return fmt.Errorf("password must contain at least one uppercase letter")
+	}
+	if !hasNumber {
+		return fmt.Errorf("password must contain at least one number")
+	}
+	if !hasSpecial {
+		return fmt.Errorf("password must contain at least one special character")
+	}
+
+	return nil
+}
+
+// TrimSpace removes leading and trailing white spaces from a string.
+func TrimSpace(s string) string {
+	return strings.TrimSpace(s)
+}
+
+
