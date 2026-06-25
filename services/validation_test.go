@@ -87,5 +87,3 @@ func TestTrimSpace(t *testing.T) {
 		})
 	}
 }
-
-

@@ -14,7 +14,7 @@ func IsValidEmail(email string) bool {
 	if email == "" {
 		return false
 	}
-	
+
 	addr, err := mail.ParseAddress(email)
 	if err != nil {
 		return false
@@ -30,7 +30,7 @@ func IsValidEmail(email string) bool {
 	if len(parts) != 2 {
 		return false
 	}
-	
+
 	domain := parts[1]
 	domainParts := strings.Split(domain, ".")
 	if len(domainParts) < 2 {
@@ -109,5 +109,3 @@ func ValidatePassword(password string) error {
 func TrimSpace(s string) string {
 	return strings.TrimSpace(s)
 }
-
-
