@@ -61,6 +61,13 @@ jobs:
             const status = failed > 0 ? '❌ Tests failed' : '✅ All tests passed';
             const rows = failures.length ? `\n\n**Failed tests:**\n${failures.join('\n')}` : '';
             const body = `### Test Results\n${status}\n\n| Passed | Failed | Skipped |\n|--------|--------|--------|\n| ${passed} | ${failed} | ${skipped} |${rows}`;
+
+            if (!context.issue.number) {
+              console.log('Not a pull request. Skipping comment posting.');
+              console.log(body);
+              return;
+            }
+
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number
             });
