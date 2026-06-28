@@ -36,11 +36,11 @@ func TestGetValidationFilePath_Env(t *testing.T) {
 	}
 }
 
-func TestFailingExample_Invalid(t *testing.T) {
-	// A deliberately failing test to demonstrate failure reporting in GitHub Actions
-	t.Log("This test is expected to fail to show the failure formatting.")
-	t.Fail()
-}
+// func TestFailingExample_Invalid(t *testing.T) {
+// 	// A deliberately failing test to demonstrate failure reporting in GitHub Actions
+// 	t.Log("This test is expected to fail to show the failure formatting.")
+// 	t.Fail()
+// }
 
 func TestSkippedExample(t *testing.T) {
 	t.Skip("This test is skipped to demonstrate skip reporting.")
