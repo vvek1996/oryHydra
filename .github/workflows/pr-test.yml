@@ -6,6 +6,9 @@ on:
   #     - feature/group-management
   workflow_dispatch:
 
+env:
+  GOWORK: off
+
 jobs:
   run-tests-and-report:
     runs-on: ubuntu-latest
@@ -30,11 +33,12 @@ jobs:
 
       - name: Run Tests
         id: run_tests
-        run: >
-          go tool gotestsum
-          --format github-actions
-          --jsonfile test-results.json
-          -- -count=1 -timeout 300s ./internal/... ./test/integration/
+        run: |
+          touch test-results-one.json test-results-two.json
+          go run gotest.tools/gotestsum@latest --format github-actions --jsonfile test-results-one.json -- -C one -count=1 -timeout 300s ./... || touch .test_failed
+          go run gotest.tools/gotestsum@latest --format github-actions --jsonfile test-results-two.json -- -C two -count=1 -timeout 300s ./... || touch .test_failed
+          cat test-results-one.json test-results-two.json > test-results.json
+          if [ -f .test_failed ]; then exit 1; fi
 
       - name: Post test results on PR
         if: always()
