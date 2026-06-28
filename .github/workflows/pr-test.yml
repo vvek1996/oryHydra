@@ -22,11 +22,19 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: Run tests
-        run: |
-          go test -json -C one ./... > test-results.json || touch .test_failed
-          go test -json -C two ./... >> test-results.json || touch .test_failed
-          if [ -f .test_failed ]; then exit 1; fi
+      - name: Install Go Dependencies
+        run: make install-deps
+
+      - name: Build Go Binary
+        run: make code-build
+
+      - name: Run Tests
+        id: run_tests
+        run: >
+          go tool gotestsum
+          --format github-actions
+          --jsonfile test-results.json
+          -- -count=1 -timeout 300s ./internal/... ./test/integration/
 
       - name: Post test results on PR
         if: always()
