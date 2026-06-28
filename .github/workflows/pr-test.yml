@@ -1,7 +1,57 @@
-name: Build and Push Docker Image
+name: PR Test Runner
 
 on:
   # push:
   #   branches:
   #     - feature/group-management
   workflow_dispatch:
+
+jobs:
+  run-tests-and-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Run tests
+        run: |
+          go test -json -C one ./... > test-results.json || touch .test_failed
+          go test -json -C two ./... >> test-results.json || touch .test_failed
+          if [ -f .test_failed ]; then exit 1; fi
+
+      - name: Post test results on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const lines = fs.readFileSync('test-results.json', 'utf8').trim().split('\n');
+            let passed = 0, failed = 0, skipped = 0;
+            const failures = [];
+            for (const line of lines) {
+              const e = JSON.parse(line);
+              if (e.Action === 'pass' && e.Test) passed++;
+              else if (e.Action === 'fail' && e.Test) { failed++; failures.push(`- \`${e.Package} / ${e.Test}\``); }
+              else if (e.Action === 'skip' && e.Test) skipped++;
+            }
+            const status = failed > 0 ? '❌ Tests failed' : '✅ All tests passed';
+            const rows = failures.length ? `\n\n**Failed tests:**\n${failures.join('\n')}` : '';
+            const body = `### Test Results\n${status}\n\n| Passed | Failed | Skipped |\n|--------|--------|--------|\n| ${passed} | ${failed} | ${skipped} |${rows}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number
+            });
+            const existing = comments.find(c => c.body.startsWith('### Test Results'));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
