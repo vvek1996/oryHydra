@@ -1,13 +1,13 @@
 name: Build and Push Docker Image
 
-on:
-  push:
-    branches:
-      - feature/group-management
-  pull_request:
-    branches:
-      - master
-      - feature/group-management
+# on:
+#   push:
+#     branches:
+#       - feature/group-management
+#   pull_request:
+#     branches:
+#       - master
+#       - feature/group-management
 
 env:
   REGISTRY: ghcr.io
