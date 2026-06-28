@@ -1,6 +1,9 @@
 name: Build and Push Docker Image
 
 on:
+  # push:
+  #   branches:
+  #     - feature/group-management
   workflow_dispatch:
 
 env:
