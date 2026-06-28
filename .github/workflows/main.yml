@@ -1,10 +1,7 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - feature/group-management
-  pull_request:
-    branches:
-      - master
-      - feature/group-management
+  # push:
+  #   branches:
+  #     - feature/group-management
+  workflow_dispatch:
