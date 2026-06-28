@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: gin-server
-        image: gin-server:v1
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/vvek1996/oryhydra:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 4000
         env:
