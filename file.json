@@ -7,6 +7,10 @@
         {
             "email": "john@example.com",
             "password": "Bank@123456789"
+        },
+        {
+            "email": "johnexample.com",
+            "password": "Bank@123456789"
         }
     ],
     "group": [
