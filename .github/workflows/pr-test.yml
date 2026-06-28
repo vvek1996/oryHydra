@@ -1,8 +1,10 @@
 name: PR Test Runner
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  # push:
+  #   branches:
+  #     - feature/group-management
+  workflow_dispatch:
 
 jobs:
   run-tests-and-report:
