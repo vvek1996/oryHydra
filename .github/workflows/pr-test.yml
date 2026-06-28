@@ -35,8 +35,8 @@ jobs:
         id: run_tests
         run: |
           touch test-results-one.json test-results-two.json
-          go run gotest.tools/gotestsum@latest --format github-actions --jsonfile test-results-one.json -- -C one -count=1 -timeout 300s ./... || touch .test_failed
-          go run gotest.tools/gotestsum@latest --format github-actions --jsonfile test-results-two.json -- -C two -count=1 -timeout 300s ./... || touch .test_failed
+          (cd one && go run gotest.tools/gotestsum@latest --format github-actions --jsonfile ../test-results-one.json -- -count=1 -timeout 300s ./...) || touch .test_failed
+          (cd two && go run gotest.tools/gotestsum@latest --format github-actions --jsonfile ../test-results-two.json -- -count=1 -timeout 300s ./...) || touch .test_failed
           cat test-results-one.json test-results-two.json > test-results.json
           if [ -f .test_failed ]; then exit 1; fi
 
@@ -46,7 +46,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const lines = fs.readFileSync('test-results.json', 'utf8').trim().split('\n');
+            if (!fs.existsSync('test-results.json')) return;
+            const content = fs.readFileSync('test-results.json', 'utf8').trim();
+            if (!content) return;
+            const lines = content.split('\n');
             let passed = 0, failed = 0, skipped = 0;
             const failures = [];
             for (const line of lines) {
