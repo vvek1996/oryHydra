@@ -20,7 +20,7 @@ func IsValidEmail(email string) bool {
 		return false
 	}
 
-	// mail.ParseAddress can accept "Name <email@domain.com>", so we check if the parsed Address 
+	// mail.ParseAddress can accept "Name <email@domain.com>", so we check if the parsed Address
 	// matches the input exactly.
 	if addr.Address != email {
 		return false

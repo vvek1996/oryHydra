@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"json1/services"
+	"test1/services"
 )
 
 type CLIResponse struct {
