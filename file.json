@@ -10,14 +10,14 @@
         }
     ],
     "group": [
-        "admin",
+        "viewer",
         "group2"
     ],
     "userGroup": [
         {
             "user": "kp@example.com",
             "group": [
-                "admin"
+                "viewer"
             ]
         },
         {
