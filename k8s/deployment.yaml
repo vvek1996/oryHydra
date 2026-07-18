@@ -1,49 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gin-server
+  name: go-server
   labels:
-    app: gin-server
+    app: go-server
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: gin-server
+      app: go-server
   template:
     metadata:
       labels:
-        app: gin-server
+        app: go-server
     spec:
       containers:
-      - name: gin-server
-        image: ghcr.io/vvek1996/oryhydra:latest
-        imagePullPolicy: Always
+      - name: go-server
+        image: go-server:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 4000
-        env:
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        envFrom:
-        - configMapRef:
-            name: gin-server-config
-        resources:
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-          requests:
-            cpu: "250m"
-            memory: "256Mi"
+        - containerPort: 8080
         livenessProbe:
           httpGet:
-            path: /
-            port: 4000
+            path: /health
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /
-            port: 4000
+            path: /health
+            port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
