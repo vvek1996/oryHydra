@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: go-server
-        image: ghcr.io/vvek1996/oryhydra:sha-6d49006c291e095bfee99d0d6179419d2a84b7cd
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/vvek1996/oryhydra:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         livenessProbe:

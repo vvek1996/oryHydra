@@ -1,6 +1,6 @@
 # ArgoCD Installation & Local Deployment Guide
 
-This guide describes how to install ArgoCD in your local Kubernetes cluster and deploy the Go web server using GitOps.
+This guide describes how to install ArgoCD and Argo CD Image Updater in your local Kubernetes cluster and deploy the Go web server using GitOps (without committing changes back to your Git repository).
 
 ---
 
@@ -10,7 +10,7 @@ This guide describes how to install ArgoCD in your local Kubernetes cluster and 
 
 ---
 
-## 🛠️ Step 1: Install ArgoCD
+## 🛠️ Step 1: Install ArgoCD & Image Updater
 
 1. **Create the `argocd` Namespace**:
    ```powershell
@@ -23,7 +23,14 @@ This guide describes how to install ArgoCD in your local Kubernetes cluster and 
    kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
    ```
 
-3. **Verify All ArgoCD Pods are Running**:
+3. **Install Argo CD Image Updater via Helm**:
+   ```powershell
+   helm repo add argo https://argoproj.github.io/argo-helm
+   helm repo update
+   helm upgrade --install argocd-image-updater argo/argocd-image-updater --namespace argocd
+   ```
+
+4. **Verify All Pods are Running**:
    ```powershell
    kubectl get pods -n argocd
    ```
@@ -54,23 +61,23 @@ This guide describes how to install ArgoCD in your local Kubernetes cluster and 
 
 ---
 
-## 🤖 Step 3: Automated CI/CD (GitHub Actions)
+## 🤖 Step 3: Automated CI/CD & Image Updater
 
-We have configured a GitHub Actions workflow under `.github/workflows/main.yml`. Every time you push a change to the `argocd-deployment` branch:
-1. GitHub Actions automatically builds the Docker image.
-2. It pushes the image to GitHub Container Registry (GHCR) as `ghcr.io/vvek1996/oryhydra:sha-<COMMIT_SHA>`.
-3. It automatically updates the image tag in `k8s/deployment.yaml` with the new commit SHA and commits the change back to the repository.
-4. ArgoCD detects the change in `k8s/deployment.yaml` and **automatically** syncs and deploys the new version to your local cluster.
+We use **Argo CD Image Updater** to perform rolling updates automatically without making commits back to Git:
+1. When you push to the `argocd-deployment` branch, GitHub Actions builds and pushes the image `ghcr.io/vvek1996/oryhydra:latest` to GitHub Container Registry.
+2. The **Argo CD Image Updater** running in your cluster checks your container registry every 2 minutes.
+3. When it detects a new build of the image, it tells ArgoCD to update the running deployment **in-memory** (in the cluster's active state), triggering a rolling restart.
+4. No automated commits are written back to your Git history!
 
 ---
 
-## 🚀 Step 4: Deploy the Application via ArgoCD
+## 🚀 Step 4: Deploy the Application
 
 1. **Push the Changes**:
    Ensure you have staged, committed, and pushed the new workflow file and updated manifests:
    ```powershell
    git add .
-   git commit -m "Add GitHub Actions workflow for automated GitOps deployment"
+   git commit -m "Configure Argo CD Image Updater and simplify workflow"
    git push origin argocd-deployment
    ```
 
@@ -80,26 +87,26 @@ We have configured a GitHub Actions workflow under `.github/workflows/main.yml`.
    kubectl apply -f k8s/argocd-app.yaml
    ```
 
-ArgoCD will now sync the repository, detect your manifests under `k8s/`, and automatically create the deployment.
-
 ---
 
 ## 🔍 Step 5: Verify the Deployment
 
 1. **Check Status**:
-   Go to your ArgoCD dashboard at **[https://localhost:8443](https://localhost:8443)**. You will see the `go-server-app` application appear. Click on it to see the visual tree of running Kubernetes resources.
+   Go to your ArgoCD dashboard at **[https://localhost:8443](https://localhost:8443)**. The application `go-server-app` will appear and sync.
 
 2. **Access the App**:
    The Go web server service is exposed via a LoadBalancer on port `8085`. Access the health endpoint from your host machine at:
    👉 **[http://localhost:8085/health](http://localhost:8085/health)**
 
 3. **Verify Auto-Deployments**:
-   To test the automation:
    * Modify the Go code in `cmd/server/main.go` (e.g. change the response message).
-   * Commit and push the changes: `git commit -am "test auto-deploy" && git push`
-   * Watch GitHub Actions run the build and update the manifest.
-   * Watch ArgoCD automatically detect the change and perform a rolling update of the pods.
-   * Refresh the page at `http://localhost:8085/health` to see your new changes live!
+   * Commit and push changes: `git commit -am "test auto-deploy" && git push`
+   * Once the GitHub Actions workflow completes, wait up to 2 minutes.
+   * Verify the Image Updater logs to see the detection and rollout:
+     ```powershell
+     kubectl logs -n argocd -l app.kubernetes.io/name=argocd-image-updater
+     ```
+   * Refresh `http://localhost:8085/health` to see your changes updated automatically!
 
 > [!NOTE]
 > Since the Docker image is published to GitHub Container Registry (`ghcr.io`), ensure that your package visibility settings for `oryhydra` under your GitHub Profile -> **Packages** is set to **Public** so that your local Kubernetes cluster can pull it without needing registry pull secrets.
