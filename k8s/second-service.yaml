@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: second-server-service
+spec:
+  selector:
+    app: second-server
+  ports:
+    - protocol: TCP
+      port: 8086
+      targetPort: 8081
+  type: LoadBalancer

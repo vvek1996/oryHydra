@@ -1,6 +1,6 @@
 # ArgoCD Installation & Local Deployment Guide
 
-This guide describes how to install ArgoCD and Argo CD Image Updater in your local Kubernetes cluster and deploy the Go web server using GitOps (without committing changes back to your Git repository).
+This guide describes how to install ArgoCD and Argo CD Image Updater in your local Kubernetes cluster and deploy the Go web servers using GitOps.
 
 ---
 
@@ -64,20 +64,20 @@ This guide describes how to install ArgoCD and Argo CD Image Updater in your loc
 ## 🤖 Step 3: Automated CI/CD & Image Updater
 
 We use **Argo CD Image Updater** to perform rolling updates automatically without making commits back to Git:
-1. When you push to the `argocd-deployment` branch, GitHub Actions builds and pushes the image `ghcr.io/vvek1996/oryhydra:latest` to GitHub Container Registry.
+1. When you push to the `argocd-deployment` branch, GitHub Actions builds the Docker image containing both server binaries and pushes it to GitHub Container Registry (`ghcr.io/vvek1996/oryhydra:latest`).
 2. The **Argo CD Image Updater** running in your cluster checks your container registry every 2 minutes.
-3. When it detects a new build of the image, it tells ArgoCD to update the running deployment **in-memory** (in the cluster's active state), triggering a rolling restart.
+3. When it detects a new build of the image, it tells ArgoCD to update the running deployments **in-memory**, triggering a rolling restart for both `go-server` and `second-server`.
 4. No automated commits are written back to your Git history!
 
 ---
 
-## 🚀 Step 4: Deploy the Application
+## 🚀 Step 4: Deploy the Applications
 
 1. **Push the Changes**:
-   Ensure you have staged, committed, and pushed the new workflow file and updated manifests:
+   Ensure you have staged, committed, and pushed the updated workflow file, Dockerfile, and manifests:
    ```powershell
    git add .
-   git commit -m "Configure Argo CD Image Updater and simplify workflow"
+   git commit -m "Configure multiple services and update Dockerfile"
    git push origin argocd-deployment
    ```
 
@@ -92,21 +92,25 @@ We use **Argo CD Image Updater** to perform rolling updates automatically withou
 ## 🔍 Step 5: Verify the Deployment
 
 1. **Check Status**:
-   Go to your ArgoCD dashboard at **[https://localhost:8443](https://localhost:8443)**. The application `go-server-app` will appear and sync.
+   Go to your ArgoCD dashboard at **[https://localhost:8443](https://localhost:8443)**. The application `go-server-app` will appear and sync. You should see both `go-server` and `second-server` deployments running.
 
-2. **Access the App**:
-   The Go web server service is exposed via a LoadBalancer on port `8085`. Access the health endpoint from your host machine at:
-   👉 **[http://localhost:8085/health](http://localhost:8085/health)**
+2. **Access the Services**:
+   Both services are exposed outside the cluster via LoadBalancers:
+   * **First Server** (port 8080 target): Exposes the `/health` endpoint on host port `8085`:
+     👉 **[http://localhost:8085/health](http://localhost:8085/health)**
+   * **Second Server** (port 8081 target): Exposes the `/ok` endpoint on host port `8086`:
+     👉 **[http://localhost:8086/ok](http://localhost:8086/ok)**
 
 3. **Verify Auto-Deployments**:
-   * Modify the Go code in `cmd/server/main.go` (e.g. change the response message).
-   * Commit and push changes: `git commit -am "test auto-deploy" && git push`
+   To test the automation:
+   * Modify the Go code in either `cmd/server/main.go` or `cmd/second/main.go`.
+   * Commit and push changes: `git commit -am "test multi-deploy" && git push`
    * Once the GitHub Actions workflow completes, wait up to 2 minutes.
    * Verify the Image Updater logs to see the detection and rollout:
      ```powershell
      kubectl logs -n argocd -l app.kubernetes.io/name=argocd-image-updater
      ```
-   * Refresh `http://localhost:8085/health` to see your changes updated automatically!
+   * Refresh the corresponding endpoint in your browser to see your new changes live!
 
 > [!NOTE]
 > Since the Docker image is published to GitHub Container Registry (`ghcr.io`), ensure that your package visibility settings for `oryhydra` under your GitHub Profile -> **Packages** is set to **Public** so that your local Kubernetes cluster can pull it without needing registry pull secrets.

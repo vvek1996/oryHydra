@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: second-server
+  labels:
+    app: second-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: second-server
+  template:
+    metadata:
+      labels:
+        app: second-server
+    spec:
+      containers:
+      - name: second-server
+        image: ghcr.io/vvek1996/oryhydra:latest
+        imagePullPolicy: Always
+        command: ["./second"]
+        ports:
+        - containerPort: 8081
+        livenessProbe:
+          httpGet:
+            path: /ok
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ok
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
