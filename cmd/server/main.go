@@ -9,7 +9,7 @@ func main() {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "Service is healthy")
+		fmt.Fprintln(w, "Service is healthy fff")
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
