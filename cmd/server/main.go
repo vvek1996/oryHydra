@@ -15,34 +15,26 @@ import (
 	"github.com/getsops/sops/v3/keyservice"
 )
 
-func main() {
-	// 1. Read input plain text file
-	plainBytes, err := os.ReadFile("test/intent.json")
+// Encrypt encrypts the raw data using creation rules from configPath (e.g., ".sops.yaml")
+// matched against matchingPath (e.g., "test/intent.enc.json").
+func Encrypt(plainBytes []byte, configPath string, matchingPath string) ([]byte, error) {
+	// Load creation rules
+	conf, err := config.LoadCreationRuleForFile(configPath, matchingPath, nil)
 	if err != nil {
-		fmt.Printf("Error reading input file: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to load creation rules: %w", err)
 	}
 
-	// 2. Load creation rules for a path that matches the .sops.yaml regex (e.g. ending in .enc.json)
-	conf, err := config.LoadCreationRuleForFile(".sops.yaml", "test/intent.enc.json", nil)
-	if err != nil {
-		fmt.Printf("Error loading creation rules: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Successfully loaded creation rules. KeyGroups count: %d\n", len(conf.KeyGroups))
-
-	// 3. Load plain bytes using the appropriate store
-	format := formats.FormatForPath("test/intent.json")
+	// Load plain bytes using the appropriate store
+	format := formats.FormatForPath(matchingPath)
 	storeConfig := config.NewStoresConfig()
 	store := common.StoreForFormat(format, storeConfig)
 
 	branches, err := store.LoadPlainFile(plainBytes)
 	if err != nil {
-		fmt.Printf("Error loading plain file: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to load plain file: %w", err)
 	}
 
-	// 4. Create the Tree
+	// Create the Tree
 	tree := sops.Tree{
 		Branches: branches,
 		Metadata: sops.Metadata{
@@ -59,48 +51,67 @@ func main() {
 		},
 	}
 
-	// 5. Generate DEK
+	// Generate DEK
 	keyServices := []keyservice.KeyServiceClient{
 		keyservice.NewLocalClient(),
 	}
 	dek, errs := tree.GenerateDataKeyWithKeyServices(keyServices)
 	if len(errs) > 0 {
-		fmt.Printf("Error generating DEK: %v\n", errs)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to generate DEK: %v", errs)
 	}
 
-	// 6. Encrypt the tree
+	// Encrypt the tree
 	cipher := aes.NewCipher()
 	mac, err := tree.Encrypt(dek, cipher)
 	if err != nil {
-		fmt.Printf("Error encrypting tree: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to encrypt tree: %w", err)
 	}
 
 	// Encrypt the MAC itself
 	encryptedMac, err := cipher.Encrypt(mac, dek, tree.Metadata.LastModified.Format(time.RFC3339))
 	if err != nil {
-		fmt.Printf("Error encrypting MAC: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to encrypt MAC: %w", err)
 	}
 	tree.Metadata.MessageAuthenticationCode = encryptedMac
 
-	// 7. Emit the encrypted file
-	encryptedBytes, err := store.EmitEncryptedFile(tree)
+	// Emit the encrypted file
+	return store.EmitEncryptedFile(tree)
+}
+
+// Decrypt decrypts the encrypted payload using the provided age private key.
+func Decrypt(encryptedBytes []byte, agePrivateKey string) ([]byte, error) {
+	// Set the age key in memory for SOPS to discover
+	os.Setenv("SOPS_AGE_KEY", agePrivateKey)
+
+	// Decrypt back to raw data
+	return decrypt.DataWithFormat(encryptedBytes, formats.Json)
+}
+
+func main() {
+	// 1. Read input plain text file
+	plainBytes, err := os.ReadFile("test/intent.json")
 	if err != nil {
-		fmt.Printf("Error emitting encrypted file: %v\n", err)
+		fmt.Printf("Error reading input file: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 2. Encrypt
+	encryptedBytes, err := Encrypt(plainBytes, ".sops.yaml", "test/intent.enc.json")
+	if err != nil {
+		fmt.Printf("Error encrypting: %v\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Println("Successfully encrypted JSON!")
 	fmt.Println(string(encryptedBytes))
 
-	// 8. Load age.key for decryption
+	// 3. Load age.key for decryption
 	ageKeyBytes, err := os.ReadFile("age.key")
 	if err != nil {
 		fmt.Printf("Error reading age.key: %v\n", err)
 		os.Exit(1)
 	}
+
 	// Extract the secret key line
 	var privateKey string
 	for _, line := range strings.Split(string(ageKeyBytes), "\n") {
@@ -115,14 +126,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	os.Setenv("SOPS_AGE_KEY", privateKey)
-
-	// 9. Decrypt back
-	decryptedBytes, err := decrypt.DataWithFormat(encryptedBytes, formats.Json)
+	// 4. Decrypt
+	decryptedBytes, err := Decrypt(encryptedBytes, privateKey)
 	if err != nil {
 		fmt.Printf("Error decrypting: %v\n", err)
 		os.Exit(1)
 	}
+
 	fmt.Println("Successfully decrypted JSON!")
 	fmt.Println(string(decryptedBytes))
 }
