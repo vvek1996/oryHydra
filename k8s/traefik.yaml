@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-config
+  namespace: default
+data:
+  traefik.yml: |
+    entryPoints:
+      web:
+        address: ":8080"
+
+    providers:
+      file:
+        filename: "/etc/traefik/routes.yml"
+        watch: true
+
+    api:
+      dashboard: true
+
+    log:
+      level: INFO
+
+  routes.yml: |
+    http:
+      routers:
+        # 1. Route /.ory/kratos to Kratos Public API (4433)
+        kratos-router:
+          rule: "PathPrefix(`/.ory/kratos`)"
+          entryPoints:
+            - web
+          service: kratos-service
+          middlewares:
+            - kratos-strip
+
+        # 2. Route /.ory/hydra to Hydra Public API (4444)
+        hydra-router:
+          rule: "PathPrefix(`/.ory/hydra`)"
+          entryPoints:
+            - web
+          service: hydra-service
+          middlewares:
+            - hydra-strip
+
+        # 3. Route /api to Go Backend (4000)
+        backend-router:
+          rule: "PathPrefix(`/api`)"
+          entryPoints:
+            - web
+          service: backend-service
+          middlewares:
+            - api-strip
+          priority: 50
+
+        # 4. Route / to React Frontend (3000)
+        frontend-router:
+          rule: "PathPrefix(`/`)"
+          entryPoints:
+            - web
+          service: frontend-service
+
+      services:
+        kratos-service:
+          loadBalancer:
+            servers:
+              - url: "http://kratos-public:4433"
+        hydra-service:
+          loadBalancer:
+            servers:
+              - url: "http://hydra-public:4444"
+        backend-service:
+          loadBalancer:
+            servers:
+              - url: "http://hydra-backend-go:4000"
+        frontend-service:
+          loadBalancer:
+            servers:
+              - url: "http://hydra-client:3000"
+
+      middlewares:
+        kratos-strip:
+          stripPrefix:
+            prefixes:
+              - "/.ory/kratos"
+        hydra-strip:
+          stripPrefix:
+            prefixes:
+              - "/.ory/hydra"
+        api-strip:
+          stripPrefix:
+            prefixes:
+              - "/api"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  namespace: default
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      containers:
+        - name: traefik
+          image: traefik:v2.10
+          ports:
+            - containerPort: 8080
+              name: web
+          volumeMounts:
+            - name: traefik-config-volume
+              mountPath: /etc/traefik
+      volumes:
+        - name: traefik-config-volume
+          configMap:
+            name: traefik-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: default
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: web
+  selector:
+    app: traefik
