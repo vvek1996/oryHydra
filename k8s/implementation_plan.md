@@ -2,10 +2,14 @@
 
 This plan outlines the creation of Dockerfiles, Kubernetes manifests, and configurations to deploy the Ory Hydra & Kratos stack in a Kubernetes cluster using a split-service topology while keeping the Go backend codebase completely unmodified.
 
+It also configures the Zot Container Registry to authenticate against our in-cluster Ory OIDC stack, securing OIDC credentials via a Kubernetes Secret and exposing the registry externally over HTTPS (port `8443`) using Traefik.
+
 ## User Review Required
 
-> [!NOTE]
-> All services run in dedicated Pods/Deployments. To keep the Go backend code completely unmodified (since it expects Kratos and Hydra to be on `localhost`), we run a lightweight Nginx proxy sidecar inside the Go Backend Pod. This proxy routes local loopback calls to cluster service endpoints.
+> [!IMPORTANT]
+> - **Go Backend & Zot Loopback Proxies**: To keep the Go backend code completely unmodified and bypass strict OIDC issuer URL verification, both the Go Backend and the Zot Registry pods run an Nginx loopback proxy sidecar container. These sidecars resolve `localhost` endpoints internally to appropriate cluster service names.
+> - **Kubernetes OIDC Secret**: The Zot OIDC credentials (`client-id` and `client-secret`) are stored in a Kubernetes `Secret` and mounted into the container to prevent exposing plain-text credentials.
+> - **Traefik HTTPS Gateway**: Traefik is exposed on port `8443` (LoadBalancer) and routes requests directly to the Zot service with SSL/TLS enabled (`tls: {}`).
 
 ## Docker Build Commands
 
@@ -34,31 +38,18 @@ We will use the existing Dockerfiles and create the manifests inside the `k8s/` 
 
 ### 2. Kubernetes Manifests
 
-#### [NEW] [postgres.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/postgres.yaml)
-- **Deployment & Service**: Runs PostgreSQL `16-alpine`.
-- **ConfigMap**: Exposes database schemas setup from `postgres.sql` to initialize `hydra` and `kratos` databases on launch.
-- **PersistentVolumeClaim**: Storage volume for Postgres.
+#### [MODIFY] [hydra.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/hydra.yaml)
+- **Job**: Modified client registration to idempotently register/import BOTH `test-client` and `zot-client` with appropriate callback URIs.
 
-#### [NEW] [kratos.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/kratos.yaml)
-- **Deployment & Services**: Deploys Ory Kratos and exposes Public (`4433`) and Admin (`4434`) cluster services.
-- **ConfigMap**: Contains `kratos.yml` (configured to connect to postgres service) and `identity.schema.json`.
-- **InitContainer**: Runs migrations automatically before Kratos starts.
+#### [MODIFY] [traefik.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/traefik.yaml)
+- **ConfigMap (`traefik-config`)**: Configured HTTPS Secure entrypoint on port `8443`, routing to `zot-service` with TLS enabled.
+- **Service**: Exposed LoadBalancer port `8443`.
 
-#### [NEW] [hydra.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/hydra.yaml)
-- **Deployment & Services**: Deploys Ory Hydra and exposes Public (`4444`) and Admin (`4445`) cluster services.
-- **InitContainer**: Runs migrations automatically before Hydra starts.
-- **Job**: Automatically registers/imports the OAuth2 client (`36d0db37-f52e-46b6-bf1d-3923fc9cf46d`) once Hydra is ready.
-
-#### [NEW] [backend.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/backend.yaml)
-- **Deployment & Service**: Runs the Go backend container alongside an Nginx loopback proxy sidecar container.
-- **ConfigMap**: Configures Nginx to forward `localhost` ports (`4433`, `4444`, `4445`) to Kratos/Hydra cluster services.
-
-#### [NEW] [frontend.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/frontend.yaml)
-- **Deployment & Service**: Runs the React frontend client on port `3000`.
-
-#### [NEW] [traefik.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/traefik.yaml)
-- **ConfigMap**: Contains `traefik.yml` and `routes.yml` mapping external paths to the cluster DNS services (e.g. `http://hydra-backend-go:4000`).
-- **Deployment & Service**: Exposes the Traefik entrypoint on LoadBalancer port `8080`.
+#### [NEW] [zot.yaml](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s/zot.yaml)
+- **Secret (`zot-oidc-secret`)**: Stores the OIDC credentials securely.
+- **ConfigMap (`zot-config` & `zot-proxy-config`)**: Holds Zot registry configuration and Nginx proxy sidecar routing settings.
+- **Deployment**: Runs the full UI-enabled Zot registry container and the Nginx loopback proxy sidecar.
+- **Service**: Exposes Zot Registry internally on port `5000`.
 
 ---
 
@@ -74,7 +65,15 @@ We will use the existing Dockerfiles and create the manifests inside the `k8s/` 
    ```bash
    kubectl get pods
    ```
-4. Test the OAuth2 flow by navigating to `http://localhost:8080/` in your browser.
+4. Verify OIDC registration was successful:
+   ```bash
+   kubectl logs job/hydra-client-registration
+   ```
+5. Test HTTPS gateway routing to Zot:
+   ```bash
+   curl.exe -k https://localhost:8443/v2/_catalog
+   ```
+   *(Expected response: `{"code":"UNAUTHORIZED","message":"authentication required"...}`)*
 
 ### Deleting the Deployment
 To remove all deployed Kubernetes resources, run:

@@ -92,14 +92,20 @@ spec:
               done
               echo "Hydra Admin is ready."
 
-              # Delete client if it exists to ensure configuration updates are applied
+              # Delete client 1 if it exists
               if hydra list oauth2-clients --endpoint http://hydra-admin:4445 | grep -q "36d0db37-f52e-46b6-bf1d-3923fc9cf46d"; then
-                echo "Deleting existing OAuth2 client to apply updates..."
+                echo "Deleting existing test-client to apply updates..."
                 hydra delete oauth2-client 36d0db37-f52e-46b6-bf1d-3923fc9cf46d --endpoint http://hydra-admin:4445
               fi
 
-              echo "Importing OAuth2 client..."
-              echo '[{"client_id":"36d0db37-f52e-46b6-bf1d-3923fc9cf46d","client_secret":"secret","client_name":"test-client","grant_types":["authorization_code"],"response_types":["code"],"redirect_uris":["http://localhost:8080/callback"],"post_logout_redirect_uris":["http://localhost:8080/logout-callback"],"scope":"openid offline"}]' | hydra import oauth2-client --endpoint http://hydra-admin:4445
-              echo "OAuth2 client imported successfully."
+              # Delete client 2 if it exists
+              if hydra list oauth2-clients --endpoint http://hydra-admin:4445 | grep -q "zot-client"; then
+                echo "Deleting existing zot-client to apply updates..."
+                hydra delete oauth2-client zot-client --endpoint http://hydra-admin:4445
+              fi
+
+              echo "Importing OAuth2 clients..."
+              echo '[{"client_id":"36d0db37-f52e-46b6-bf1d-3923fc9cf46d","client_secret":"secret","client_name":"test-client","grant_types":["authorization_code"],"response_types":["code"],"redirect_uris":["http://localhost:8080/callback"],"post_logout_redirect_uris":["http://localhost:8080/logout-callback"],"scope":"openid offline"},{"client_id":"zot-client","client_secret":"zot-secret-value","client_name":"zot-registry","grant_types":["authorization_code","refresh_token"],"response_types":["code"],"redirect_uris":["https://localhost:8443/auth/callback/oidc","https://localhost:8443/zot/auth/callback/oidc","http://localhost:8443/auth/callback/oidc","http://localhost:8443/zot/auth/callback/oidc"],"scope":"openid profile email offline"}]' | hydra import oauth2-client --endpoint http://hydra-admin:4445
+              echo "OAuth2 clients imported successfully."
       restartPolicy: OnFailure
   backoffLimit: 4

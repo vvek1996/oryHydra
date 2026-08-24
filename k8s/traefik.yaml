@@ -8,6 +8,8 @@ data:
     entryPoints:
       web:
         address: ":8080"
+      websecure:
+        address: ":8443"
 
     providers:
       file:
@@ -58,6 +60,14 @@ data:
             - web
           service: frontend-service
 
+        # 5. Route HTTPS traffic to Zot Registry (5000) with auto-generated TLS certificate
+        zot-router:
+          rule: "PathPrefix(`/`)"
+          entryPoints:
+            - websecure
+          service: zot-service
+          tls: {}
+
       services:
         kratos-service:
           loadBalancer:
@@ -75,6 +85,10 @@ data:
           loadBalancer:
             servers:
               - url: "http://hydra-client:3000"
+        zot-service:
+          loadBalancer:
+            servers:
+              - url: "http://zot-service:5000"
 
       middlewares:
         kratos-strip:
@@ -113,6 +127,8 @@ spec:
           ports:
             - containerPort: 8080
               name: web
+            - containerPort: 8443
+              name: websecure
           volumeMounts:
             - name: traefik-config-volume
               mountPath: /etc/traefik
@@ -132,5 +148,8 @@ spec:
     - port: 8080
       targetPort: 8080
       name: web
+    - port: 8443
+      targetPort: 8443
+      name: websecure
   selector:
     app: traefik
