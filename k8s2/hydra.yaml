@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hydra
+  namespace: default
+  labels:
+    app: hydra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hydra
+  template:
+    metadata:
+      labels:
+        app: hydra
+    spec:
+      initContainers:
+        - name: hydra-migrate
+          image: oryd/hydra:v2.2.0
+          command: ["hydra", "migrate", "sql", "-e", "--yes"]
+          env:
+            - name: DSN
+              value: postgres://ory:secret@postgres:5432/hydra?sslmode=disable
+      containers:
+        - name: hydra
+          image: oryd/hydra:v2.2.0
+          command: ["hydra", "serve", "all", "--dev"]
+          ports:
+            - containerPort: 4444
+              name: public
+            - containerPort: 4445
+              name: admin
+          env:
+            - name: DSN
+              value: postgres://ory:secret@postgres:5432/hydra?sslmode=disable
+            - name: SECRETS_SYSTEM
+              value: some-secure-random-string
+            - name: URLS_SELF_ISSUER
+              value: http://localhost:8080/.ory/hydra/
+            - name: URLS_LOGIN
+              value: http://localhost:8080/login
+            - name: URLS_CONSENT
+              value: http://localhost:8080/consent
+            - name: URLS_LOGOUT
+              value: http://localhost:8080/api/logout
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hydra-public
+  namespace: default
+spec:
+  ports:
+    - port: 4444
+      targetPort: 4444
+      name: public
+  selector:
+    app: hydra
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hydra-admin
+  namespace: default
+spec:
+  ports:
+    - port: 4445
+      targetPort: 4445
+      name: admin
+  selector:
+    app: hydra
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hydra-client-registration
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - name: register-client
+          image: oryd/hydra:v2.2.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Hydra Admin endpoint..."
+              until wget -qO- http://hydra-admin:4445/health/ready; do
+                sleep 2
+              done
+              echo "Hydra Admin is ready."
+
+              # Delete client 1 if it exists
+              if hydra list oauth2-clients --endpoint http://hydra-admin:4445 | grep -q "36d0db37-f52e-46b6-bf1d-3923fc9cf46d"; then
+                echo "Deleting existing test-client to apply updates..."
+                hydra delete oauth2-client 36d0db37-f52e-46b6-bf1d-3923fc9cf46d --endpoint http://hydra-admin:4445
+              fi
+
+              # Delete client 2 if it exists
+              if hydra list oauth2-clients --endpoint http://hydra-admin:4445 | grep -q "zot-client"; then
+                echo "Deleting existing zot-client to apply updates..."
+                hydra delete oauth2-client zot-client --endpoint http://hydra-admin:4445
+              fi
+
+              echo "Importing OAuth2 clients..."
+              echo '[{"client_id":"36d0db37-f52e-46b6-bf1d-3923fc9cf46d","client_secret":"secret","client_name":"test-client","grant_types":["authorization_code"],"response_types":["code"],"redirect_uris":["http://localhost:8080/callback"],"post_logout_redirect_uris":["http://localhost:8080/logout-callback"],"scope":"openid offline"},{"client_id":"zot-client","client_secret":"zot-secret-value","client_name":"zot-registry","grant_types":["authorization_code","refresh_token"],"response_types":["code"],"redirect_uris":["https://zot.localhost:8443/auth/callback/oidc","http://zot.localhost:8443/auth/callback/oidc","https://localhost:8443/auth/callback/oidc","http://localhost:8443/auth/callback/oidc","https://zot.localhost:8443/zot/auth/callback/oidc","http://zot.localhost:8443/zot/auth/callback/oidc","https://localhost:8443/zot/auth/callback/oidc","http://localhost:8443/zot/auth/callback/oidc"],"scope":"openid profile email offline"}]' | hydra import oauth2-client --endpoint http://hydra-admin:4445
+              echo "OAuth2 clients imported successfully."
+      restartPolicy: OnFailure
+  backoffLimit: 4
