@@ -103,6 +103,10 @@ data:
           stripPrefix:
             prefixes:
               - "/api"
+    tls:
+      certificates:
+        - certFile: /etc/traefik/certs/tls.crt
+          keyFile: /etc/traefik/certs/tls.key
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -132,10 +136,15 @@ spec:
           volumeMounts:
             - name: traefik-config-volume
               mountPath: /etc/traefik
+            - name: cert-volume
+              mountPath: /etc/traefik/certs
       volumes:
         - name: traefik-config-volume
           configMap:
             name: traefik-config
+        - name: cert-volume
+          secret:
+            secretName: traefik-tls-cert
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,19 @@
+[ req ]
+default_bits       = 4096
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+x509_extensions    = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+CN                 = localhost
+
+[ v3_req ]
+keyUsage           = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage   = serverAuth
+subjectAltName     = @alt_names
+
+[ alt_names ]
+DNS.1              = localhost
+DNS.2              = zot.localhost
+DNS.3              = headlamp.localhost
