@@ -55,14 +55,21 @@ sequenceDiagram
 
 ---
 
-## 3. Deployment Commands
-
-To deploy Solution C:
+To deploy the components:
 
 ```powershell
+# Deploy ALL components at once:
+kubectl apply -k ./k8s3
+# Delete ALL components at once:
+kubectl delete -k ./k8s3
 
-# 1. Deploy Solution C
-kubectl apply -f ./k8s3
+# Or deploy SEPARATE components individually:
+kubectl apply -k ./k8s3/db
+kubectl apply -k ./k8s3/gateway
+kubectl apply -k ./k8s3/kratos
+kubectl apply -k ./k8s3/hydra
+kubectl apply -k ./k8s3/zot
+kubectl apply -k ./k8s3/app
 ```
 
 ---

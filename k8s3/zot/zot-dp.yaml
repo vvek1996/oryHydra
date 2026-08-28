@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zot
+  namespace: default
+  labels:
+    app: zot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zot
+  template:
+    metadata:
+      labels:
+        app: zot
+    spec:
+      containers:
+        # Zot Registry Container
+        - name: zot
+          image: ghcr.io/project-zot/zot:v2.1.15
+          ports:
+            - containerPort: 5000
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+            - name: zot-config
+              mountPath: /etc/zot/config.json
+              subPath: config.json
+            - name: zot-secret
+              mountPath: /secret
+            - name: cert-volume
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              subPath: tls.crt
+        
+        # Nginx Loopback Proxy (resolves localhost:8080 and localhost:8443 to traefik in the default namespace)
+        - name: loopback-proxy
+          image: nginx:alpine
+          ports:
+            - containerPort: 8080
+              name: proxy-port
+            - containerPort: 8443
+              name: proxy-tls
+          volumeMounts:
+            - name: proxy-config-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: zot-config
+          configMap:
+            name: zot-config
+        - name: proxy-config-volume
+          configMap:
+            name: zot-proxy-config
+        - name: zot-secret
+          secret:
+            secretName: zot-secret
+        - name: cert-volume
+          secret:
+            secretName: traefik-tls-cert

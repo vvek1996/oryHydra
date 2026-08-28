@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zot-config
+  namespace: default
+data:
+  config.json: |
+    {
+      "distSpecVersion": "1.1.0",
+      "storage": {
+        "rootDirectory": "/var/lib/registry"
+      },
+      "http": {
+        "address": "0.0.0.0",
+        "port": "5000",
+        "auth": {
+          "openid": {
+            "providers": {
+              "oidc": {
+                "name": "Ory Hydra",
+                "issuer": "https://localhost:8443/.ory/hydra/",
+                "credentialsfile": "/secret/credentials.json",
+                "scopes": ["openid", "profile", "email", "offline"]
+              }
+            }
+          }
+        },
+        "externalUrl": "https://zot.localhost:8443"
+      },
+      "extensions": {
+        "search": {},
+        "ui": {}
+      },
+      "log": {
+        "level": "debug"
+      }
+    }
