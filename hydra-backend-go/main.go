@@ -2,13 +2,22 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // Structs for Ory API interactions
@@ -70,7 +79,65 @@ func copyHeaders(dst, src http.Header) {
 	}
 }
 
+func initTracer() (*sdktrace.TracerProvider, error) {
+	ctx := context.Background()
+	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if endpoint == "" {
+		endpoint = "jaeger.default.svc.cluster.local:4317"
+	}
+
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint(endpoint),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("hydra-backend-go"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+
+	return tp, nil
+}
+
+func traceMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		tracer := otel.Tracer("hydra-backend-go")
+		ctx, span := tracer.Start(ctx, r.Method+" "+r.URL.Path)
+		defer span.End()
+
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func newRequestWithTracing(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+	return req, nil
+}
+
 func main() {
+	tp, err := initTracer()
+	if err != nil {
+		log.Fatal("failed to initialize tracer:", err)
+	}
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	mux := http.NewServeMux()
 
 	// 1. GET /login
@@ -83,7 +150,7 @@ func main() {
 
 		// Check session with Kratos
 		client := &http.Client{}
-		kratosReq, err := http.NewRequest("GET", "http://localhost:4433/sessions/whoami", nil)
+		kratosReq, err := newRequestWithTracing(r.Context(), "GET", "http://localhost:4433/sessions/whoami", nil)
 		if err != nil {
 			log.Println("Kratos req build error:", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -125,7 +192,7 @@ func main() {
 		}
 		jsonBody, _ := json.Marshal(acceptBody)
 
-		hydraReq, err := http.NewRequest("PUT", "http://localhost:4445/oauth2/auth/requests/login/accept?login_challenge="+challenge, bytes.NewBuffer(jsonBody))
+		hydraReq, err := newRequestWithTracing(r.Context(), "PUT", "http://localhost:4445/oauth2/auth/requests/login/accept?login_challenge="+challenge, bytes.NewBuffer(jsonBody))
 		if err != nil {
 			log.Println("Hydra req build error:", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -173,7 +240,7 @@ func main() {
 		client := &http.Client{}
 
 		// Validate Kratos session
-		kratosReq, err := http.NewRequest("GET", "http://localhost:4433/sessions/whoami", nil)
+		kratosReq, err := newRequestWithTracing(r.Context(), "GET", "http://localhost:4433/sessions/whoami", nil)
 		if err != nil {
 			http.Error(w, "Consent failed", http.StatusInternalServerError)
 			return
@@ -201,7 +268,7 @@ func main() {
 		email := session.Identity.Traits.Email
 
 		// GET consent request details from Hydra
-		consentReq, err := http.NewRequest("GET", "http://localhost:4445/oauth2/auth/requests/consent?consent_challenge="+challenge, nil)
+		consentReq, err := newRequestWithTracing(r.Context(), "GET", "http://localhost:4445/oauth2/auth/requests/consent?consent_challenge="+challenge, nil)
 		if err != nil {
 			http.Error(w, "Consent failed", http.StatusInternalServerError)
 			return
@@ -236,7 +303,7 @@ func main() {
 		}
 		jsonBody, _ := json.Marshal(acceptBody)
 
-		acceptReq, err := http.NewRequest("PUT", "http://localhost:4445/oauth2/auth/requests/consent/accept?consent_challenge="+challenge, bytes.NewBuffer(jsonBody))
+		acceptReq, err := newRequestWithTracing(r.Context(), "PUT", "http://localhost:4445/oauth2/auth/requests/consent/accept?consent_challenge="+challenge, bytes.NewBuffer(jsonBody))
 		if err != nil {
 			http.Error(w, "Consent failed", http.StatusInternalServerError)
 			return
@@ -281,7 +348,7 @@ func main() {
 		formValues.Set("redirect_uri", redirectURI)
 
 		client := &http.Client{}
-		hydraReq, err := http.NewRequest("POST", "http://localhost:4444/oauth2/token", strings.NewReader(formValues.Encode()))
+		hydraReq, err := newRequestWithTracing(r.Context(), "POST", "http://localhost:4444/oauth2/token", strings.NewReader(formValues.Encode()))
 		if err != nil {
 			http.Error(w, "Token exchange failed", http.StatusInternalServerError)
 			return
@@ -317,7 +384,7 @@ func main() {
 		formValues.Set("token", token)
 
 		client := &http.Client{}
-		hydraReq, err := http.NewRequest("POST", "http://localhost:4445/oauth2/introspect", strings.NewReader(formValues.Encode()))
+		hydraReq, err := newRequestWithTracing(r.Context(), "POST", "http://localhost:4445/oauth2/introspect", strings.NewReader(formValues.Encode()))
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -375,7 +442,7 @@ func main() {
 		client := &http.Client{}
 
 		// 1. Accept the logout challenge in Ory Hydra
-		hydraReq, err := http.NewRequest("PUT", "http://localhost:4445/oauth2/auth/requests/logout/accept?logout_challenge="+challenge, nil)
+		hydraReq, err := newRequestWithTracing(r.Context(), "PUT", "http://localhost:4445/oauth2/auth/requests/logout/accept?logout_challenge="+challenge, nil)
 		if err != nil {
 			log.Println("Hydra logout accept build failed:", err)
 			http.Error(w, "Logout failed", http.StatusInternalServerError)
@@ -398,7 +465,7 @@ func main() {
 		redirectUrl := acceptRes.RedirectTo
 
 		// 2. Fetch browser logout URL from Ory Kratos
-		kratosReq, err := http.NewRequest("GET", "http://localhost:4433/self-service/logout/browser", nil)
+		kratosReq, err := newRequestWithTracing(r.Context(), "GET", "http://localhost:4433/self-service/logout/browser", nil)
 		if err != nil {
 			http.Redirect(w, r, redirectUrl, http.StatusFound)
 			return
@@ -430,5 +497,5 @@ func main() {
 	})
 
 	log.Println("Backend running on http://localhost:4000")
-	log.Fatal(http.ListenAndServe(":4000", enableCORS(mux)))
+	log.Fatal(http.ListenAndServe(":4000", traceMiddleware(enableCORS(mux))))
 }

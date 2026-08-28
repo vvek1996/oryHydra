@@ -48,6 +48,12 @@ spec:
               value: https://localhost:8443/consent
             - name: URLS_LOGOUT
               value: https://localhost:8443/api/logout
+            - name: TRACING_PROVIDER
+              value: "otel"
+            - name: TRACING_PROVIDERS_OTLP_SERVER_URL
+              value: "jaeger.default.svc.cluster.local:4317"
+            - name: TRACING_PROVIDERS_OTLP_INSECURE
+              value: "true"
 ---
 apiVersion: v1
 kind: Service
