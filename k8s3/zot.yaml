@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zot-secret
+  namespace: default
+type: Opaque
+stringData:
+  credentials.json: |
+    {
+      "clientid": "zot-client",
+      "clientsecret": "zot-secret-value"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zot-proxy-config
+  namespace: default
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/log/nginx/nginx.pid;
+    events {
+        worker_connections  1024;
+    }
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+        server {
+            listen 8080;
+            location / {
+                # Route to Traefik in the default namespace
+                proxy_pass http://traefik.default.svc.cluster.local:8080;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }
+        }
+    }
+    stream {
+        server {
+            listen 8443;
+            proxy_pass traefik.default.svc.cluster.local:8443;
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zot-config
+  namespace: default
+data:
+  config.json: |
+    {
+      "distSpecVersion": "1.1.0",
+      "storage": {
+        "rootDirectory": "/var/lib/registry"
+      },
+      "http": {
+        "address": "0.0.0.0",
+        "port": "5000",
+        "auth": {
+          "openid": {
+            "providers": {
+              "oidc": {
+                "name": "Ory Hydra",
+                "issuer": "https://localhost:8443/.ory/hydra/",
+                "credentialsfile": "/secret/credentials.json",
+                "scopes": ["openid", "profile", "email", "offline"]
+              }
+            }
+          }
+        },
+        "externalUrl": "https://zot.localhost:8443"
+      },
+      "extensions": {
+        "search": {},
+        "ui": {}
+      },
+      "log": {
+        "level": "debug"
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zot
+  namespace: default
+  labels:
+    app: zot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zot
+  template:
+    metadata:
+      labels:
+        app: zot
+    spec:
+      containers:
+        # Zot Registry Container
+        - name: zot
+          image: ghcr.io/project-zot/zot:v2.1.15
+          ports:
+            - containerPort: 5000
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+            - name: zot-config
+              mountPath: /etc/zot/config.json
+              subPath: config.json
+            - name: zot-secret
+              mountPath: /secret
+            - name: cert-volume
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              subPath: tls.crt
+        
+        # Nginx Loopback Proxy (resolves localhost:8080 and localhost:8443 to traefik in the default namespace)
+        - name: loopback-proxy
+          image: nginx:alpine
+          ports:
+            - containerPort: 8080
+              name: proxy-port
+            - containerPort: 8443
+              name: proxy-tls
+          volumeMounts:
+            - name: proxy-config-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: zot-config
+          configMap:
+            name: zot-config
+        - name: proxy-config-volume
+          configMap:
+            name: zot-proxy-config
+        - name: zot-secret
+          secret:
+            secretName: zot-secret
+        - name: cert-volume
+          secret:
+            secretName: traefik-tls-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zot-service
+  namespace: default
+spec:
+  ports:
+    - port: 5000
+      targetPort: 5000
+      name: http
+  selector:
+    app: zot

@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-proxy-config
+  namespace: default
+data:
+  default.conf: |
+    server {
+        listen 4433;
+        location / {
+            proxy_pass http://kratos-public:4433;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+    server {
+        listen 4444;
+        location / {
+            proxy_pass http://hydra-public:4444;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+    server {
+        listen 4445;
+        location / {
+            proxy_pass http://hydra-admin:4445;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hydra-backend-go
+  namespace: default
+  labels:
+    app: hydra-backend-go
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hydra-backend-go
+  template:
+    metadata:
+      labels:
+        app: hydra-backend-go
+    spec:
+      containers:
+        # Go Backend Container
+        - name: backend-go
+          image: hydra-backend-go:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+              name: http
+        
+        # Nginx Proxy Sidecar (exposes ports 4433, 4444, 4445 on localhost)
+        - name: loopback-proxy
+          image: nginx:alpine
+          ports:
+            - containerPort: 4433
+              name: kratos-proxy
+            - containerPort: 4444
+              name: hydra-pub-proxy
+            - containerPort: 4445
+              name: hydra-adm-proxy
+          volumeMounts:
+            - name: proxy-config-volume
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: proxy-config-volume
+          configMap:
+            name: backend-proxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hydra-backend-go
+  namespace: default
+spec:
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: http
+  selector:
+    app: hydra-backend-go

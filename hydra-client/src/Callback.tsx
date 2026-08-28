@@ -28,7 +28,7 @@ function Callback() {
     // 📝 Clean URL to avoid reuse
     window.history.replaceState({}, document.title, "/callback");
 
-    fetch("http://localhost:8080/api/token", {
+    fetch(window.location.origin + "/api/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
