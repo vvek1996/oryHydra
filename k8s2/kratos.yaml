@@ -178,13 +178,13 @@ spec:
               done
               echo "Kratos Admin is ready."
               
-              if curl -s http://kratos-admin:4434/admin/identities | grep -q "admin@example.com"; then
-                echo "Default user admin@example.com already exists."
+              if curl -s http://kratos-admin:4434/admin/identities | grep -q "kpvivek196@gmail.com"; then
+                echo "Default user kpvivek196@gmail.com already exists."
               else
-                echo "Creating default user admin@example.com..."
+                echo "Creating default user kpvivek196@gmail.com..."
                 curl -s -X POST http://kratos-admin:4434/admin/identities \
                   -H "Content-Type: application/json" \
-                  -d '{"schema_id":"default","traits":{"email":"admin@example.com"},"credentials":{"password":{"config":{"password":"secretpassword"}}}}'
+                  -d '{"schema_id":"default","traits":{"email":"kpvivek196@gmail.com"},"credentials":{"password":{"config":{"password":"secretpassword"}}}}'
                 echo "Default user created successfully."
               fi
       restartPolicy: OnFailure

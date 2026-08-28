@@ -25,7 +25,7 @@ sequenceDiagram
 
     Note over User,Kratos: Step 1: Initial Login
     User->>GW: Login request to http://localhost:8080/login
-    User->>Kratos: Enter credentials (admin@example.com)
+    User->>Kratos: Enter credentials (kpvivek196@gmail.com)
     Kratos-->>User: Set active session cookie (domain: localhost)
 
     Note over User,Zot: Step 2: Accessing Zot
@@ -36,7 +36,7 @@ sequenceDiagram
     Note over User,Hydra: Step 3: Auto-Authentication
     User->>Hydra: Redirect request containing Kratos session cookie
     Hydra->>Kratos: Validate active session cookie
-    Kratos-->>Hydra: Session is active (admin@example.com)
+    Kratos-->>Hydra: Session is active (kpvivek196@gmail.com)
     Hydra-->>User: Auto-authorize and redirect back to Zot callback
 
     Note over User,Zot: Step 4: Token Exchange

@@ -52,7 +52,7 @@ sequenceDiagram
     GW->>Zot: Forward to zot-service (port 5000)
     User->>GW: Click Login -> Redirects to http://localhost:8080/login
     GW->>Kratos: Load registration/login forms
-    User->>Kratos: Enter credentials (admin@example.com)
+    User->>Kratos: Enter credentials (kpvivek196@gmail.com)
     Kratos->>Hydra: Authorize OIDC Request
     Hydra->>User: Redirect to callback URL (https://zot.localhost:8443/auth/callback/oidc)
     User->>GW: Callback with Code & State
@@ -95,7 +95,7 @@ The registration job imports the `zot-client` and whitelists both subdomain endp
 
 Solution A includes a seeder Job (`kratos-user-seeding`) that automatically runs after deployment. This job registers a default developer account so you don't have to manually sign up:
 
-* **Username/Email**: `admin@example.com`
+* **Username/Email**: `kpvivek196@gmail.com`
 * **Password**: `secretpassword`
 
 ---
