@@ -22,6 +22,11 @@ data:
     log:
       level: INFO
 
+    tracing:
+      jaeger:
+        collector:
+          endpoint: "http://jaeger.default.svc.cluster.local:14268/api/traces"
+
   routes.yml: |
     http:
       routers:
@@ -68,6 +73,13 @@ data:
           service: zot-service
           tls: {}
 
+        # Route jaeger.localhost to Jaeger UI
+        jaeger-router:
+          rule: "Host(`jaeger.localhost`)"
+          entryPoints:
+            - web
+          service: jaeger-service
+
       services:
         kratos-service:
           loadBalancer:
@@ -89,6 +101,10 @@ data:
           loadBalancer:
             servers:
               - url: "http://zot-service:5000"
+        jaeger-service:
+          loadBalancer:
+            servers:
+              - url: "http://jaeger:16686"
 
       middlewares:
         kratos-strip:

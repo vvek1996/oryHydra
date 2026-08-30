@@ -58,7 +58,12 @@ spec:
           ports:
             - containerPort: 4000
               name: http
-        
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "jaeger.default.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "hydra-backend-go"
+
         # Nginx Proxy Sidecar (exposes ports 4433, 4444, 4445 on localhost)
         - name: loopback-proxy
           image: nginx:alpine

@@ -99,7 +99,7 @@ spec:
               subPath: config.json
             - name: zot-secret
               mountPath: /secret
-        
+
         # Nginx Loopback Proxy (resolves localhost:8080 to traefik:8080 in the default namespace)
         - name: loopback-proxy
           image: nginx:alpine

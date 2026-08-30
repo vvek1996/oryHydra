@@ -61,8 +61,8 @@ sequenceDiagram
 To deploy Solution B:
 
 ```powershell
-# 1. Deploy Solution B
-kubectl apply -f ./k8s2
+# 1. Deploy Solution B:
+kubectl apply -k ./k8s2
 ```
 
 ---
@@ -75,3 +75,4 @@ kubectl apply -f ./k8s2
     *   **Email**: `kpvivek196@gmail.com`
     *   **Password**: `secretpassword`
 4.  Consent to the permissions. You will be redirected back to `https://zot.localhost:8443/home` as an authenticated user.
+5.  **Telemetry Verification**: Visit `http://jaeger.localhost:8080/` in your browser. Select `hydra-backend-go` or `traefik` from the Service dropdown and click **Find Traces** to view distributed request traces.
