@@ -130,27 +130,27 @@ data:
         kratos-service:
           loadBalancer:
             servers:
-              - url: "http://kratos-public:4433"
+              - url: "http://kratos-public.default.svc.cluster.local:4433"
         hydra-service:
           loadBalancer:
             servers:
-              - url: "http://hydra-public:4444"
+              - url: "http://hydra-public.default.svc.cluster.local:4444"
         backend-service:
           loadBalancer:
             servers:
-              - url: "http://hydra-backend-go:4000"
+              - url: "http://hydra-backend-go.default.svc.cluster.local:4000"
         frontend-service:
           loadBalancer:
             servers:
-              - url: "http://hydra-client:3000"
+              - url: "http://hydra-client.default.svc.cluster.local:3000"
         zot-service:
           loadBalancer:
             servers:
-              - url: "http://zot-service:5000"
+              - url: "http://zot-service.zot.svc.cluster.local:5000"
         jaeger-service:
           loadBalancer:
             servers:
-              - url: "http://jaeger:16686"
+              - url: "http://jaeger.default.svc.cluster.local:16686"
 
       middlewares:
         redirect-to-https:

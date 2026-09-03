@@ -49,9 +49,16 @@ sequenceDiagram
 *   **Kratos**: Public base URL (`https://localhost:8443/.ory/kratos/`), CORS allowed origins, and return/UI URLs are set strictly to HTTPS.
 *   **Hydra**: Issuer is set to `https://localhost:8443/.ory/hydra/`. All redirects (`URLS_LOGIN`, `URLS_CONSENT`, etc.) target HTTPS. Cookies are forced secure (`SERVE_COOKIES_SECURE=true`).
 
-### C. Zot Trust & Loopback Proxy ([`zot.yaml`](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s3/zot.yaml))
-*   **TCP Stream proxying**: The Nginx sidecar container (`loopback-proxy`) runs a TCP stream proxy on port `8443` to route Zot's local OIDC calls through Traefik dynamically.
-*   **Trusted Root Certificate**: The public custom certificate (`tls.crt`) is mounted to `/etc/ssl/certs/ca-certificates.crt` inside the Zot registry container, letting it trust the self-signed gateway certificate natively.
+### C. Zot Trust & Loopback Proxy ([`zot/`](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/k8s3/zot/))
+*   **TCP Stream proxying**: The Nginx sidecar container (`loopback-proxy`) runs a TCP stream proxy on port `8443` to route Zot's local OIDC calls through Traefik (`traefik.traefik.svc.cluster.local:8443`) dynamically.
+*   **Direct Certificate Trust**: The `traefik-tls-cert` secret is generated in the `zot` namespace directly from `certs/tls.crt` by Kustomize and mounted to `/etc/ssl/certs/ca-certificates.crt`, allowing Zot to natively trust Traefik over HTTPS without extra sidecars or initContainers.
+
+### D. Namespace Isolation
+*   **`traefik` namespace**: Houses the Traefik Gateway deployment, configuration, service, and TLS secret.
+*   **`zot` namespace**: Houses the Zot registry deployment, proxy, and configurations.
+*   **`default` namespace**: Houses the Ory Stack (Kratos, Hydra, Postgres, Seeding jobs) and Application services.
+
+For continuous rotation and dynamic sync patterns, see **[`docs/tls_rotation_and_sync_strategies.md`](file:///c:/Users/ADMIN/Desktop/notes/oryHydra/docs/tls_rotation_and_sync_strategies.md)**.
 
 ---
 

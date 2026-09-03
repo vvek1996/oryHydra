@@ -18,8 +18,8 @@ data:
         server {
             listen 8080;
             location / {
-                # Route to Traefik in the default namespace
-                proxy_pass http://traefik.default.svc.cluster.local:8080;
+                # Route to Traefik in the traefik namespace
+                proxy_pass http://traefik.traefik.svc.cluster.local:8080;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -29,6 +29,6 @@ data:
     stream {
         server {
             listen 8443;
-            proxy_pass traefik.default.svc.cluster.local:8443;
+            proxy_pass traefik.traefik.svc.cluster.local:8443;
         }
     }

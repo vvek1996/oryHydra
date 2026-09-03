@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ./k8s3
+
+secretGenerator:
+  - name: traefik-tls-cert
+    namespace: traefik
+    type: kubernetes.io/tls
+    files:
+      - tls.crt=certs/tls.crt
+      - tls.key=certs/tls.key
+    options:
+      disableNameSuffixHash: true
+
+  - name: traefik-tls-cert
+    namespace: zot
+    type: kubernetes.io/tls
+    files:
+      - tls.crt=certs/tls.crt
+      - tls.key=certs/tls.key
+    options:
+      disableNameSuffixHash: true

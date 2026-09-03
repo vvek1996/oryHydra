@@ -33,8 +33,8 @@ spec:
             - name: cert-volume
               mountPath: /etc/ssl/certs/ca-certificates.crt
               subPath: tls.crt
-        
-        # Nginx Loopback Proxy (resolves localhost:8080 and localhost:8443 to traefik in the default namespace)
+
+        # Nginx Loopback Proxy (resolves localhost:8080 and localhost:8443 to traefik in the traefik namespace)
         - name: loopback-proxy
           image: nginx:alpine
           ports:
