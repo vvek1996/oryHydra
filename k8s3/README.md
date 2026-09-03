@@ -66,26 +66,35 @@ To deploy the components:
 
 ```powershell
 # Deploy ALL components at once:
-kubectl apply -k ./k8s3
-# Delete ALL components at once:
-kubectl delete -k ./k8s3
+kubectl apply -k .
 
-# Or deploy SEPARATE components individually:
-kubectl apply -k ./k8s3/db
-kubectl apply -k ./k8s3/gateway
-kubectl apply -k ./k8s3/kratos
-kubectl apply -k ./k8s3/hydra
-kubectl apply -k ./k8s3/zot
-kubectl apply -k ./k8s3/app
+# Delete ALL components at once:
+kubectl delete -k .
 ```
 
 ---
 
-## 4. Verification
+## 4. Authentication Options & Verification
 
-1.  Open an **Incognito Window** and navigate to `https://zot.localhost:8443/`.
-2.  Click **Login** in the top right.
-3.  Authenticate using your default credentials:
-    *   **Email**: `kpvivek196@gmail.com`
-    *   **Password**: `secretpassword`
-4.  Consent to the permissions. You will be redirected back to `https://zot.localhost:8443/home` as an authenticated user.
+Zot is configured with **Dual Authentication**:
+
+### Option A: Sign In with Ory Hydra (OIDC SSO)
+1. Open an **Incognito Window** and navigate to `https://zot.localhost:8443/`.
+2. Click **Login** in the top right.
+3. Click **"Login with Ory Hydra"**.
+4. Authenticate using your Kratos credentials:
+   * **Email**: `kpvivek196@gmail.com`
+   * **Password**: `secretpassword`
+5. Click **Consent**. You will be redirected back to `https://zot.localhost:8443/home` authenticated.
+
+### Option B: Local Admin Credentials (UI & Docker CLI)
+Used for break-glass registry administration or CI/CD pipelines:
+
+* **Default Admin Account**:
+  * **Username**: `admin`
+  * **Password**: `adminpassword`
+
+#### CLI Login Example:
+```powershell
+docker login zot.localhost:8443 -u admin -p adminpassword
+```
